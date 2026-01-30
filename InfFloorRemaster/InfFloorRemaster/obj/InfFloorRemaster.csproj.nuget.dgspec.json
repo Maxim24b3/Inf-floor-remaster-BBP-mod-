@@ -1,0 +1,57 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\max00\\source\\repos\\InfFloorRemaster\\InfFloorRemaster\\InfFloorRemaster.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\max00\\source\\repos\\InfFloorRemaster\\InfFloorRemaster\\InfFloorRemaster.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\max00\\source\\repos\\InfFloorRemaster\\InfFloorRemaster\\InfFloorRemaster.csproj",
+        "projectName": "InfFloorRemaster",
+        "projectPath": "C:\\Users\\max00\\source\\repos\\InfFloorRemaster\\InfFloorRemaster\\InfFloorRemaster.csproj",
+        "packagesPath": "C:\\Users\\max00\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\max00\\source\\repos\\InfFloorRemaster\\InfFloorRemaster\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\max00\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net4.8"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net48": {
+            "targetAlias": "net4.8",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
+      },
+      "frameworks": {
+        "net48": {
+          "targetAlias": "net4.8",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.101\\RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}
