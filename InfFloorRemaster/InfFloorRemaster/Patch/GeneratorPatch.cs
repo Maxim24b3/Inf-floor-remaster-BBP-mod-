@@ -13,7 +13,7 @@ namespace InfFloorRemaster.Patch
 {
     [HarmonyPatch(typeof(MainGameManager))]
     [HarmonyPatch("LoadNextLevel")]
-    class GenerateNext
+    class LoadNextPatch
     {
         static bool Prefix()
         {
@@ -142,19 +142,33 @@ namespace InfFloorRemaster.Patch
                 }
             });
 
+            lvlObj.hallWallTexs = InfFloorMod.wallTextures.ToArray();
+            lvlObj.hallFloorTexs = InfFloorMod.floorTextures.ToArray();
+            lvlObj.hallCeilingTexs = InfFloorMod.ceilTextures.ToArray();
+
             RoomGroup classRoomGroup = lvlObj.roomGroup.First(x => x.name == "Class");
             classRoomGroup.potentialRooms = wra.ToArray();
             classRoomGroup.minRooms = currentFD.classRoomCount;
             classRoomGroup.maxRooms = currentFD.classRoomCount;
+            classRoomGroup.floorTexture = InfFloorMod.profFloorTextures.ToArray();
+            classRoomGroup.wallTexture = InfFloorMod.wallTextures.ToArray();
+            classRoomGroup.ceilingTexture = InfFloorMod.ceilTextures.ToArray();
 
             RoomGroup facultyRoomGroup = lvlObj.roomGroup.First(x => x.name == "Faculty");
             facultyRoomGroup.minRooms = currentFD.minFacultyRoomCount;
             facultyRoomGroup.maxRooms = currentFD.maxFacultyRoomCount;
             facultyRoomGroup.potentialRooms = CreateShuffledListWithCount(genData.facultyRoomAssets, 4 + Mathf.FloorToInt(currentFD.FloorID / 4), rng).ToArray();
+            facultyRoomGroup.floorTexture = InfFloorMod.profFloorTextures.ToArray();
+            facultyRoomGroup.wallTexture = InfFloorMod.facultyWallTextures.ToArray();
+            facultyRoomGroup.ceilingTexture = InfFloorMod.ceilTextures.ToArray();
+            facultyRoomGroup.stickToHallChance = currentFD.facultyStickToHall;
 
             RoomGroup officeRoomGroup = lvlObj.roomGroup.First(x => x.name == "Office");
             officeRoomGroup.maxRooms = Mathf.Max(currentFD.maxOffices, 1);
             officeRoomGroup.minRooms = 1;
+            officeRoomGroup.floorTexture = InfFloorMod.profFloorTextures.ToArray();
+            officeRoomGroup.wallTexture = InfFloorMod.facultyWallTextures.ToArray();
+            officeRoomGroup.ceilingTexture = InfFloorMod.ceilTextures.ToArray();
 
             lvlObj.potentialStructures = new WeightedStructureWithParameters[0];
             lvlObj.potentialStructures = genData.potentialStructures;

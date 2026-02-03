@@ -6,9 +6,11 @@ using InfFloorRemaster.Patch;
 using InfFloorRemaster.Scripts;
 using InfFloorRemaster.Scripts.Game.Builders;
 using InfFloorRemaster.Scripts.Game.Components;
+using InfFloorRemaster.Scripts.Game.Items;
 using InfFloorRemaster.Scripts.Game.Objects;
 using MTM101BaldAPI;
 using MTM101BaldAPI.AssetTools;
+using MTM101BaldAPI.ObjectCreation;
 using MTM101BaldAPI.Reflection;
 using MTM101BaldAPI.Registers;
 using MTM101BaldAPI.UI;
@@ -30,35 +32,24 @@ namespace InfFloorRemaster
     public class InfFloorMod : BaseUnityPlugin
     {
         public static InfFloorMod Instance { get; private set; }
-        public static Dictionary<PluginInfo, Action<GeneratorData>> genActions = new Dictionary<PluginInfo, Action<GeneratorData>>();
         public static SceneObject currentSceneObject;
         public static EndlessSave save = new EndlessSave();
         public static FloorData currentFloorData => save.myFloorData;
         public static SceneObject refScene;
         public static SceneObject refF3Scene;
+        public static SceneObject pitScene;
         public AssetManager assetManager = new AssetManager();
         public Dictionary<string ,Sprite> UpgradeIcons = new Dictionary<string, Sprite>();
         public static Dictionary<string, StandardUpgrade> Upgrades = new Dictionary<string, StandardUpgrade>();
+        public static Mode NNFloorMode = EnumExtensions.ExtendEnum<Mode>("Floor99");
 
-        public static void AddGeneratorAction(PluginInfo info, Action<GeneratorData> data)
-        {
-            if (genActions.ContainsKey(info))
-            {
-                throw new Exception("Can't add already existing generator action!");
-            }
-            genActions.Add(info, data);
-        }
+        public static List<WeightedTexture2D> wallTextures = new List<WeightedTexture2D>();
+        public static List<WeightedTexture2D> facultyWallTextures = new List<WeightedTexture2D>();
+        public static List<WeightedTexture2D> ceilTextures = new List<WeightedTexture2D>();
+        public static List<WeightedTexture2D> floorTextures = new List<WeightedTexture2D>();
+        public static List<WeightedTexture2D> profFloorTextures = new List<WeightedTexture2D>();
 
-        private void Awake()
-        {
-            Log(0, $"InfFloors mod loaded. Version: {ModInfos.Ver}");
-            Harmony harmony = new Harmony(ModInfos.GUID);
-            SceneManager.sceneLoaded += OnSceneLoaded;
-            Instance = this;
-            StartCoroutine(WaitTilAllLoaded(harmony));
-            MTM101BaldAPI.SaveSystem.ModdedSaveGame.AddSaveHandler(new EndlessFloorsSaveHandler());
-            LoadingEvents.RegisterOnAssetsLoaded(Info, RegisterImportant, LoadingEventOrder.Pre);
-        }
+        private float baseGameMultiplier = 1.5f;
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
@@ -67,76 +58,27 @@ namespace InfFloorRemaster
                 GameObject[] rootObjects = scene.GetRootGameObjects();
                 GameObject pickModeMenu = rootObjects.Where(x => x.name == "PickMode").First();
                 GameObject hideSeekMenuObject = rootObjects.Where(x => x.name == "HideSeekMenu").First();
-                pickModeMenu.AddComponent<EndlessTitleUI>();
-                HideSeekMenuPatch hideSeekMenu = hideSeekMenuObject.AddComponent<HideSeekMenuPatch>();
-                hideSeekMenu.gl = rootObjects.Where(x => x.name == "GameLoader").First().GetComponent<GameLoader>();
+                EndlessTitleUI endlessTitleUI = pickModeMenu.AddComponent<EndlessTitleUI>();
+                endlessTitleUI.hdieSeekMenu = hideSeekMenuObject.transform;
+                endlessTitleUI.gl = rootObjects.Where(x => x.name == "GameLoader").First().GetComponent<GameLoader>();
             }
         }
 
-        private IEnumerator WaitTilAllLoaded(Harmony harmony)
+        void AddWeightedTextures(ref List<WeightedTexture2D> tex, string folder)
         {
-            FieldInfo loaded = AccessTools.Field(typeof(Chainloader), "_loaded");
-
-            while (!(bool)loaded.GetValue(loaded))
+            string myPath = AssetLoader.GetModPath(this);
+            string wallsPath = Path.Combine(myPath, "Textures", folder);
+            foreach (string p in Directory.GetFiles(wallsPath))
             {
-                yield return null;
+                string standardName = Path.GetFileNameWithoutExtension(p);
+                Texture2D texx = AssetLoader.TextureFromFile(p);
+                string[] splitee = standardName.Split('!');
+                tex.Add(new WeightedTexture2D()
+                {
+                    selection = texx,
+                    weight = int.Parse(splitee[1])
+                });
             }
-            harmony.PatchAllConditionals();
-        }
-
-        private void RegisterImportant()
-        {
-            SceneObject[] scenes = Extensions.GetAllSceneObjects();
-            refF3Scene = Extensions.CopyScene(scenes.Where(x => x.levelTitle == "F3").First());
-            currentSceneObject = scenes.Where(x => x.levelTitle == "F3").First();
-            refScene = scenes.Where(x => x.levelTitle == "F5").First();
-            currentSceneObject.nextLevel = currentSceneObject;
-            currentSceneObject.levelTitle = "F1";
-            currentSceneObject.levelNo = 0;
-            assetManager.AddRange<HappyBaldi>(Resources.FindObjectsOfTypeAll<HappyBaldi>(), (bald) =>
-            {
-                if (bald.name == "HappyBaldi") return "HappyBaldi1";
-                return bald.name;
-            });
-            GameObject levelSkiper = new GameObject();
-            levelSkiper.AddComponent<Cheats>();
-            LevelAsset pit = Extensions.GetSceneObject("PIT").levelAsset;
-            Structure_PitStopLevelUpgradeMachiene upgradeMachineBuilder = new GameObject().AddComponent<Structure_PitStopLevelUpgradeMachiene>();
-            upgradeMachineBuilder.gameObject.ConvertToPrefab(true);
-            pit.structures.Add(new StructureBuilderData
-            {
-                prefab = upgradeMachineBuilder
-            });
-            assetManager.Add<Sprite>("UpgradesMachineSprite", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, "UpgradesMachine.png"), 100));
-            assetManager.Add<Sprite>("AutoTag", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "AutoTag.png")), 100));
-            assetManager.Add<Sprite>("AutoTag2", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "AutoTag2.png")), 100));
-            assetManager.Add<Sprite>("Bank1", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Bank1.png")), 100));
-            assetManager.Add<Sprite>("Bank2", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Bank2.png")), 100));
-            assetManager.Add<Sprite>("Bank3", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Bank3.png")), 100));
-            assetManager.Add<Sprite>("Bank5", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Bank5.png")), 100));
-            assetManager.Add<Sprite>("Bank6", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Bank6.png")), 100));
-            assetManager.Add<Sprite>("Bank10", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Bank10.png")), 100));
-            assetManager.Add<Sprite>("Reroll", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Reroll.png")), 100));
-            assetManager.Add<Sprite>("Glue1", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Glue1.png")), 100));
-            assetManager.Add<Sprite>("Glue2", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Glue2.png")), 100));
-            assetManager.Add<Sprite>("Glue3", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Glue3.png")), 100));
-            assetManager.Add<Sprite>("Glue4", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Glue4.png")), 100));
-            UpgradeIcons.Add("AutoTag", assetManager.Get<Sprite>("AutoTag"));
-            UpgradeIcons.Add("AutoTag2", assetManager.Get<Sprite>("AutoTag2"));
-            UpgradeIcons.Add("Bank1", assetManager.Get<Sprite>("Bank1"));
-            UpgradeIcons.Add("Bank2", assetManager.Get<Sprite>("Bank2"));
-            UpgradeIcons.Add("Bank3", assetManager.Get<Sprite>("Bank3"));
-            UpgradeIcons.Add("Bank5", assetManager.Get<Sprite>("Bank5"));
-            UpgradeIcons.Add("Bank6", assetManager.Get<Sprite>("Bank6"));
-            UpgradeIcons.Add("Bank10", assetManager.Get<Sprite>("Bank10"));
-            UpgradeIcons.Add("Reroll", assetManager.Get<Sprite>("Reroll"));
-            UpgradeIcons.Add("Glue1", assetManager.Get<Sprite>("Glue1"));
-            UpgradeIcons.Add("Glue2", assetManager.Get<Sprite>("Glue2"));
-            UpgradeIcons.Add("Glue3", assetManager.Get<Sprite>("Glue3"));
-            UpgradeIcons.Add("Glue4", assetManager.Get<Sprite>("Glue4"));
-            UpgradeRegister.RegisterDefaults();
-            RegisterCanvases();
-            RegisterObjects();
         }
 
         private void RegisterCanvases()
@@ -306,6 +248,13 @@ namespace InfFloorRemaster
             sceneObject.levelNo = save.currentFloor;
             sceneObject.nextLevel = currentSceneObject;
             sceneObject.levelTitle = "F" + save.currentFloor;
+            List<WeightedItemObject> tempItems = new List<WeightedItemObject>();
+            tempItems.AddRange(sceneObject.shopItems);
+            tempItems.Add(new WeightedItemObject()
+            {
+                selection = assetManager.Get<ItemObject>("Bonk"),
+                weight = 100
+            });
             Singleton<CoreGameManager>.Instance.levelMapHasBeenPurchasedFor = null;
             Singleton<CoreGameManager>.Instance.tripAvailable = true;
             System.Random random = new System.Random(save.currentFloor + Singleton<CoreGameManager>.Instance.Seed());
@@ -331,6 +280,11 @@ namespace InfFloorRemaster
             {
                 genData.items.Add(i);
             }
+            genData.items.Add(new WeightedItemObject()
+            {
+                selection = InfFloorMod.Instance.assetManager.Get<ItemObject>("Bonk"),
+                weight = 305
+            });
             List<WeightedRoomAsset> weightedRoomAssets = new List<WeightedRoomAsset>();
             //Class rooms
             weightedRoomAssets.Clear();
@@ -390,12 +344,150 @@ namespace InfFloorRemaster
 
             genData.potentialStructures = genData.potentialStructures.AddNewStructures(customSturctures);
         }
+
+        private void RegisterImportant()
+        {
+            string myPath = AssetLoader.GetModPath(this);
+            SceneObject[] scenes = Extensions.GetAllSceneObjects();
+            refF3Scene = Extensions.CopyScene(scenes.Where(x => x.levelTitle == "F3").First());
+            currentSceneObject = scenes.Where(x => x.levelTitle == "F3").First();
+            refScene = scenes.Where(x => x.levelTitle == "F5").First();
+            currentSceneObject.nextLevel = currentSceneObject;
+            currentSceneObject.levelTitle = "F1";
+            currentSceneObject.levelNo = 0;
+            assetManager.AddRange<HappyBaldi>(Resources.FindObjectsOfTypeAll<HappyBaldi>(), (bald) =>
+            {
+                if (bald.name == "HappyBaldi") return "HappyBaldi1";
+                return bald.name;
+            });
+            GameObject levelSkiper = new GameObject();
+            levelSkiper.AddComponent<Cheats>();
+            pitScene = Extensions.GetSceneObject("PIT");
+            LevelAsset pit = pitScene.levelAsset;
+            Structure_PitStopLevelUpgradeMachiene upgradeMachineBuilder = new GameObject().AddComponent<Structure_PitStopLevelUpgradeMachiene>();
+            upgradeMachineBuilder.gameObject.ConvertToPrefab(true);
+            pit.structures.Add(new StructureBuilderData
+            {
+                prefab = upgradeMachineBuilder
+            });
+            string wallsPath = Path.Combine(myPath, "Textures", "Walls");
+            foreach (string p in Directory.GetFiles(wallsPath))
+            {
+                string standardName = Path.GetFileNameWithoutExtension(p);
+                if (standardName.StartsWith("F_")) continue; // no.
+                Texture2D tex = AssetLoader.TextureFromFile(p);
+                string[] splitee = standardName.Split('!');
+                wallTextures.Add(new WeightedTexture2D()
+                {
+                    selection = tex,
+                    weight = int.Parse(splitee[1])
+                });
+                string facultyEquiv = Path.Combine(wallsPath, "F_" + splitee[0] + ".png");
+                if (File.Exists(facultyEquiv))
+                {
+                    Texture2D texf = AssetLoader.TextureFromFile(facultyEquiv);
+                    facultyWallTextures.Add(new WeightedTexture2D()
+                    {
+                        selection = texf,
+                        weight = int.Parse(splitee[1])
+                    });
+                }
+                else
+                {
+                    facultyWallTextures.Add(new WeightedTexture2D()
+                    {
+                        selection = tex,
+                        weight = int.Parse(splitee[1])
+                    });
+                }
+            }
+            AddWeightedTextures(ref ceilTextures, "Ceilings");
+            AddWeightedTextures(ref floorTextures, "Floors");
+            AddWeightedTextures(ref profFloorTextures, "ProfFloors");
+            InfFloorMod.wallTextures.AddRange(currentSceneObject.levelObject.roomGroup.First(x => x.name == "Class").wallTexture.Select(x => new WeightedTexture2D() { weight = Mathf.RoundToInt(x.weight * baseGameMultiplier), selection = x.selection }));
+            InfFloorMod.wallTextures.AddRange(currentSceneObject.levelObject.hallWallTexs.Select(x => new WeightedTexture2D() { weight = Mathf.RoundToInt(x.weight * baseGameMultiplier), selection = x.selection }));
+            InfFloorMod.facultyWallTextures.AddRange(currentSceneObject.levelObject.roomGroup.First(x => x.name == "Faculty").wallTexture.Select(x => new WeightedTexture2D() { weight = Mathf.RoundToInt(x.weight * baseGameMultiplier), selection = x.selection }));
+            InfFloorMod.ceilTextures.AddRange(currentSceneObject.levelObject.hallCeilingTexs.Select(x => new WeightedTexture2D() { weight = Mathf.RoundToInt(x.weight * baseGameMultiplier), selection = x.selection }));
+            InfFloorMod.ceilTextures.AddRange(currentSceneObject.levelObject.roomGroup.First(x => x.name == "Class").ceilingTexture.Select(x => new WeightedTexture2D() { weight = Mathf.RoundToInt(x.weight * baseGameMultiplier), selection = x.selection }));
+            InfFloorMod.ceilTextures.AddRange(currentSceneObject.levelObject.roomGroup.First(x => x.name == "Faculty").ceilingTexture.Select(x => new WeightedTexture2D() { weight = Mathf.RoundToInt(x.weight * baseGameMultiplier), selection = x.selection }));
+            InfFloorMod.floorTextures.AddRange(currentSceneObject.levelObject.hallFloorTexs.Select(x => new WeightedTexture2D() { weight = Mathf.RoundToInt(x.weight * baseGameMultiplier), selection = x.selection }));
+            InfFloorMod.profFloorTextures.AddRange(currentSceneObject.levelObject.roomGroup.First(x => x.name == "Faculty").floorTexture.Select(x => new WeightedTexture2D() { weight = Mathf.RoundToInt(x.weight * baseGameMultiplier), selection = x.selection }));
+            InfFloorMod.profFloorTextures.AddRange(currentSceneObject.levelObject.roomGroup.First(x => x.name == "Class").floorTexture.Select(x => new WeightedTexture2D() { weight = Mathf.RoundToInt(x.weight * baseGameMultiplier), selection = x.selection }));
+            AssetLoader.LocalizationFromMod(this);
+            Resources.FindObjectsOfTypeAll<CoreGameManager>()[0].gameObject.AddComponent<BonkManager>();
+            Resources.FindObjectsOfTypeAll<PlayerManager>()[0].gameObject.AddComponent<PlayerParametrs>();
+            assetManager.Add<Sprite>("UpgradesMachineSprite", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, "UpgradesMachine.png"), 100));
+            assetManager.Add<Sprite>("AutoTag", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "AutoTag.png")), 100));
+            assetManager.Add<Sprite>("AutoTag2", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "AutoTag2.png")), 100));
+            assetManager.Add<Sprite>("BonkLarge", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Items", "BonkIcon_Large.png")), 50));
+            assetManager.Add<Sprite>("BonkSmall", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Items", "BonkIcon_Small.png")), 100));
+            assetManager.Add<Sprite>("BonkGauge", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Items", "BonkIcon_gauge.png")), 100));
+            assetManager.Add<Sprite>("Bank1", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Bank1.png")), 100));
+            assetManager.Add<Sprite>("Bank2", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Bank2.png")), 100));
+            assetManager.Add<Sprite>("Bank3", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Bank3.png")), 100));
+            assetManager.Add<Sprite>("Bank5", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Bank5.png")), 100));
+            assetManager.Add<Sprite>("Bank6", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Bank6.png")), 100));
+            assetManager.Add<Sprite>("Bank10", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Bank10.png")), 100));
+            assetManager.Add<Sprite>("Reroll", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Reroll.png")), 100));
+            assetManager.Add<Sprite>("Glue1", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Glue1.png")), 100));
+            assetManager.Add<Sprite>("Glue2", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Glue2.png")), 100));
+            assetManager.Add<Sprite>("Glue3", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Glue3.png")), 100));
+            assetManager.Add<Sprite>("Glue4", AssetLoader.SpriteFromTexture2D(AssetLoader.TextureFromMod(this, Path.Combine("Upgrades", "Glue4.png")), 100));
+            UpgradeIcons.Add("AutoTag", assetManager.Get<Sprite>("AutoTag"));
+            UpgradeIcons.Add("AutoTag2", assetManager.Get<Sprite>("AutoTag2"));
+            UpgradeIcons.Add("Bank1", assetManager.Get<Sprite>("Bank1"));
+            UpgradeIcons.Add("Bank2", assetManager.Get<Sprite>("Bank2"));
+            UpgradeIcons.Add("Bank3", assetManager.Get<Sprite>("Bank3"));
+            UpgradeIcons.Add("Bank5", assetManager.Get<Sprite>("Bank5"));
+            UpgradeIcons.Add("Bank6", assetManager.Get<Sprite>("Bank6"));
+            UpgradeIcons.Add("Bank10", assetManager.Get<Sprite>("Bank10"));
+            UpgradeIcons.Add("Reroll", assetManager.Get<Sprite>("Reroll"));
+            UpgradeIcons.Add("Glue1", assetManager.Get<Sprite>("Glue1"));
+            UpgradeIcons.Add("Glue2", assetManager.Get<Sprite>("Glue2"));
+            UpgradeIcons.Add("Glue3", assetManager.Get<Sprite>("Glue3"));
+            UpgradeIcons.Add("Glue4", assetManager.Get<Sprite>("Glue4"));
+            UpgradeRegister.RegisterDefaults();
+            RegisterCanvases();
+            RegisterObjects();
+            assetManager.Add<ItemObject>("Bonk", new ItemBuilder(Info)
+                .SetNameAndDescription("Itm_Bonk", "Itm_Bonk_Desc")
+                .SetSprites(assetManager.Get<Sprite>("BonkSmall"), assetManager.Get<Sprite>("BonkLarge"))
+                .SetEnum("Bonk")
+                .SetGeneratorCost(25)
+                .SetShopPrice(1000)
+                .SetItemComponent<ITM_Bonk>()
+                .SetMeta(ItemFlags.Persists, new string[] { "drink", "food" })
+                .Build()
+            );
+        }
+
+        private void Awake()
+        {
+            Log(0, $"InfFloors mod loaded. Version: {ModInfos.Ver}");
+            Harmony harmony = new Harmony(ModInfos.GUID);
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            Instance = this;
+            StartCoroutine(WaitTilAllLoaded(harmony));
+            MTM101BaldAPI.SaveSystem.ModdedSaveGame.AddSaveHandler(new EndlessFloorsSaveHandler());
+            LoadingEvents.RegisterOnAssetsLoaded(Info, RegisterImportant, LoadingEventOrder.Pre);
+        }
+
+        private IEnumerator WaitTilAllLoaded(Harmony harmony)
+        {
+            FieldInfo loaded = AccessTools.Field(typeof(Chainloader), "_loaded");
+
+            while (!(bool)loaded.GetValue(loaded))
+            {
+                yield return null;
+            }
+            harmony.PatchAllConditionals();
+        }
     }
 
     internal static class ModInfos
     {
         public const string Name = "Inf floors remaster";
         public const string GUID = "maximski24.IFR";
-        public const string Ver = "1.0.0";
+        public const string Ver = "1.3.0";
     }
 }
