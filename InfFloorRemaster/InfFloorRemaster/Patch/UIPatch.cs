@@ -1,19 +1,21 @@
-﻿using System.Linq;
+﻿using HarmonyLib;
+using MTM101BaldAPI.SaveSystem;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
-using HarmonyLib;
 
 namespace InfFloorRemaster.Patch
 {
     public class EndlessTitleUI : MonoBehaviour
     {
         public GameLoader gl;
-        public Transform hdieSeekMenu;
+        public Transform hideSeekMenu;
         private bool has_incre = false;
         private TextLocalizer f99Local;
-        private string mode;
+        public string mode;
+        private HideSeekMenuModed hideSeekMenuModed;
 
         private void OnEnable()
         {
@@ -53,8 +55,9 @@ namespace InfFloorRemaster.Patch
             nnB.OnHighlight.AddListener(() => modeText.gameObject.GetComponent<TextLocalizer>().GetLocalizedText("Btn_NNChallenge_Desc"));
             nnB.OnHighlight.AddListener(() => mode = "nine nine");
 
-            StandardMenuButton startGameButton = hdieSeekMenu.Find("MainNew").GetComponent<StandardMenuButton>();
-
+            hideSeekMenuModed = hideSeekMenu.gameObject.AddComponent<HideSeekMenuModed>();
+            hideSeekMenuModed.titleUI = this;
+            StandardMenuButton startGameButton = hideSeekMenu.Find("MainNew").GetComponent<StandardMenuButton>();
             startGameButton.OnPress.RemoveAllListeners();
             startGameButton.OnPress.AddListener(() => {
                 if (mode == "main")
@@ -62,6 +65,7 @@ namespace InfFloorRemaster.Patch
                     InfFloorMod.save = new Classes.EndlessSave();
                     gl.LoadLevel(InfFloorMod.currentSceneObject);
                     InfFloorMod.Instance.UpdateData(ref InfFloorMod.currentSceneObject);
+                    Singleton<CoreGameManager>.Instance.currentMode = Mode.Main;
                 }
                 else if (mode == "nine nine")
                 {
@@ -86,6 +90,37 @@ namespace InfFloorRemaster.Patch
                 f99Local.GetLocalizedText("99");
                 has_incre = true;
             }
+        }
+    }
+
+    public class HideSeekMenuModed : MonoBehaviour
+    {
+        public EndlessTitleUI titleUI;
+
+        void Update()
+        {
+            if (titleUI.mode == "main")
+            {
+                if (Singleton<PlayerFileManager>.Instance.savedGameData.saveAvailable)
+                {
+                    StandardMenuButton continueGameButton = transform.Find("MainContinue").GetComponent<StandardMenuButton>();
+
+                    continueGameButton.gameObject.SetActive(true);
+                }
+
+            }
+            else
+            {
+                StandardMenuButton continueGameButton = transform.Find("MainContinue").GetComponent<StandardMenuButton>();
+
+                continueGameButton.gameObject.SetActive(false);
+            }
+        }
+
+        void OnEnable()
+        {
+            Transform conButt = transform.Find("MainContinue");
+            conButt.position = new Vector3(conButt.position.x, 200f, conButt.position.z);
         }
     }
 
