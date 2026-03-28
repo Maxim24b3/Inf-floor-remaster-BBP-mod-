@@ -26,7 +26,7 @@ using UnityEngine.UI;
 namespace InfFloorRemaster
 {
     [BepInDependency("mtm101.rulerp.bbplus.baldidevapi")]
-    [BepInPlugin("maximski24.baldiplus.IFR", "Inf floors remaster", "0.3.2")]
+    [BepInPlugin(ModInfos.GUID, ModInfos.Name, ModInfos.Ver)]
     public class InfFloorMod : BaseUnityPlugin
     {
         public static InfFloorMod Instance { get; private set; }
@@ -524,7 +524,7 @@ namespace InfFloorRemaster
     internal static class ModInfos
     {
         public const string Name = "Inf floors remaster";
-        public const string GUID = "maximski24.baldiplus.IFR";
+        public const string GUID = "maximski24.baldiplus.ifr";
         public const string Ver = "0.3.2";
     }
 }
