@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("InfFloorRemaster")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3361ece1821fcf588c5f0a8cc2e3b2826373c954")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8badf2ce6076a8134cae10c8669111b3a5760c8e")]
 [assembly: System.Reflection.AssemblyProductAttribute("InfFloorRemaster")]
 [assembly: System.Reflection.AssemblyTitleAttribute("InfFloorRemaster")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

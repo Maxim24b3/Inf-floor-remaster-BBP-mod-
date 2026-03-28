@@ -90,6 +90,10 @@ namespace InfFloorRemaster.Patch
             sceneObject.previousLevels = new SceneObject[0];
             LevelGenerationParameters lvlObj = __instance.ld;
 
+            sceneObject.additionalNPCs = genData.additionalNPCs;
+            sceneObject.forcedNpcs = genData.forcedNPCs.ToArray();
+            sceneObject.potentialNPCs = genData.potentialNPCs;
+
             __instance.seedOffset = currentFD.FloorID;
 
             System.Random rng = new System.Random(Singleton<CoreGameManager>.Instance.Seed() + __instance.seedOffset + currentFD.FloorID);

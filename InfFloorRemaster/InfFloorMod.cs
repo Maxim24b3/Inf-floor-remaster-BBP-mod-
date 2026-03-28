@@ -311,6 +311,7 @@ namespace InfFloorRemaster
                     selection = MetaStorage.GetNpc(Character.DrReflex)
                 },
             };
+            genData.forcedNPCs.Add(MetaStorage.GetNpc(Character.Principal));
             //Items
             WeightedItemObject[] addItems = Extensions.GetRandomLevelObjcetFromScene(refScene, LevelType.Maintenance).potentialItems;
             foreach (WeightedItemObject i in addItems)
@@ -387,6 +388,8 @@ namespace InfFloorRemaster
             string myPath = AssetLoader.GetModPath(this);
             SceneObject[] scenes = Extensions.GetAllSceneObjects();
             refF3Scene = Extensions.CopyScene(scenes.Where(x => x.levelTitle == "F3").First());
+            refF3Scene.previousLevels = new SceneObject[1];
+            refF3Scene.previousLevels[0] = refF3Scene;
             currentSceneObject = scenes.Where(x => x.levelTitle == "F3").First();
             refScene = scenes.Where(x => x.levelTitle == "F5").First();
             currentSceneObject.nextLevel = currentSceneObject;
