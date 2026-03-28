@@ -87,11 +87,8 @@ namespace InfFloorRemaster.Patch
             InfFloorMod.ExtendGenData(genData);
 
             SceneObject sceneObject = __instance.scene;
+            sceneObject.previousLevels = new SceneObject[0];
             LevelGenerationParameters lvlObj = __instance.ld;
-
-            lvlObj.potentialItems = new WeightedItemObject[0];
-            lvlObj.forcedNpcs = new NPC[0];
-            sceneObject.potentialNPCs = new List<WeightedNPC>();
 
             __instance.seedOffset = currentFD.FloorID;
 
@@ -101,10 +98,6 @@ namespace InfFloorRemaster.Patch
             lvlObj.maxSize = new IntVector2(currentFD.maxSize, currentFD.maxSize);
 
             InfFloorMod.Log(0, $"Level min size set to {lvlObj.minSize.x}, {lvlObj.minSize.z}. Level max size {lvlObj.maxSize.x}, {lvlObj.maxSize.z}");
-
-            lvlObj.potentialItems = genData.items.ToArray();
-            lvlObj.forcedNpcs = genData.forcedNPCs.ToArray();
-            sceneObject.potentialNPCs = new List<WeightedNPC>(genData.potentialNPCs);
 
             Color warmColor = new Color(180f / 255f, 150f / 255f, 100f / 255f);
             Color coldColor = new Color(80f / 255f, 100f / 255f, 150f / 255f);

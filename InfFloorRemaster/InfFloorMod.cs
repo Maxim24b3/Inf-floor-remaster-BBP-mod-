@@ -13,7 +13,6 @@ using MTM101BaldAPI.ObjectCreation;
 using MTM101BaldAPI.Reflection;
 using MTM101BaldAPI.Registers;
 using MTM101BaldAPI.UI;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -27,7 +26,7 @@ using UnityEngine.UI;
 namespace InfFloorRemaster
 {
     [BepInDependency("mtm101.rulerp.bbplus.baldidevapi")]
-    [BepInPlugin(ModInfos.GUID, ModInfos.Name, ModInfos.Ver)]
+    [BepInPlugin("maximski24.baldiplus.IFR", "Inf floors remaster", "0.3.2")]
     public class InfFloorMod : BaseUnityPlugin
     {
         public static InfFloorMod Instance { get; private set; }
@@ -263,16 +262,55 @@ namespace InfFloorRemaster
 
         internal static void ExtendGenData(GeneratorData genData)
         {
-            ItemMetaStorage items = new ItemMetaStorage();
-            NPCMetaStorage npcs = new NPCMetaStorage();
             //NPCs
             genData.additionalNPCs = 8;
-            genData.potentialNPCs = refScene.potentialNPCs;
-
-            foreach (var fn in refScene.forcedNpcs)
+            genData.potentialNPCs = new List<WeightedNPC>()
             {
-                genData.forcedNPCs.Add(fn);
-            }
+                new WeightedNPC() {
+                    weight = 90,
+                    selection = MetaStorage.GetNpc(Character.Playtime)
+                },
+                new WeightedNPC() {
+                    weight = 100,
+                    selection = MetaStorage.GetNpc(Character.Sweep)
+                },
+                new WeightedNPC() {
+                    weight = 110,
+                    selection = MetaStorage.GetNpc(Character.Beans)
+                },
+                new WeightedNPC() {
+                    weight = 85,
+                    selection = MetaStorage.GetNpc(Character.Bully)
+                },
+                new WeightedNPC() {
+                    weight = 80,
+                    selection = MetaStorage.GetNpc(Character.Crafters)
+                },
+                new WeightedNPC() {
+                    weight = 25,
+                    selection = MetaStorage.GetNpc(Character.Chalkles)
+                },
+                new WeightedNPC() {
+                    weight = 250,
+                    selection = MetaStorage.GetNpc(Character.LookAt)
+                },
+                new WeightedNPC() {
+                    weight = 90,
+                    selection = MetaStorage.GetNpc(Character.Pomp)
+                },
+                new WeightedNPC() {
+                    weight = 95,
+                    selection = MetaStorage.GetNpc(Character.Cumulo)
+                },
+                new WeightedNPC() {
+                    weight = 70,
+                    selection = MetaStorage.GetNpc(Character.Prize)
+                },
+                new WeightedNPC() {
+                    weight = 90,
+                    selection = MetaStorage.GetNpc(Character.DrReflex)
+                },
+            };
             //Items
             WeightedItemObject[] addItems = Extensions.GetRandomLevelObjcetFromScene(refScene, LevelType.Maintenance).potentialItems;
             foreach (WeightedItemObject i in addItems)
@@ -486,7 +524,7 @@ namespace InfFloorRemaster
     internal static class ModInfos
     {
         public const string Name = "Inf floors remaster";
-        public const string GUID = "maximski24.IFR";
+        public const string GUID = "maximski24.baldiplus.IFR";
         public const string Ver = "0.3.2";
     }
 }

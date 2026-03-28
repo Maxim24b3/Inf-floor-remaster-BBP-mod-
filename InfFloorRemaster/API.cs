@@ -1,5 +1,6 @@
 ﻿using InfFloorRemaster.Classes;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace InfFloorRemaster.API
 {
@@ -11,49 +12,52 @@ namespace InfFloorRemaster.API
             InfFloorMod.Upgrades.Add(upgrade.id, upgrade);
         }
 
-        // NOTE TO MODDERS: No Works!! i'm too lazy to make it works right now (are not generated in the game)!!
         public static void AddWeightedStructureWithParameters(WeightedStructureWithParameters weightedStructureWithParameters, int minFloor)
         {
-            AdditionsFromOtherMods.weightedStructureWithParameters.Add(new WeightedStructureWithParametersWithFloorPoint(weightedStructureWithParameters, minFloor));
+            AdditionsFromOtherMods.weightedStructureWithParameters.Add(new WeightedStructureWithParametersWithMinFloor(weightedStructureWithParameters, minFloor));
         }
 
-        // NOTE TO MODDERS: No Works!! i'm too lazy to make it works right now (are not generated in the game)!!
         public static void AddWeightedNPC(WeightedNPC npc, int minFloors)
         {
-            AdditionsFromOtherMods.NPCs.Add(new WeightedNPCWithFloorPoint(npc, minFloors));
+            AdditionsFromOtherMods.NPCs.Add(new WeightedNPCWithMinFloor(npc, minFloors));
         }
     }
 }
 
+// NOTE TO MODDERS: It's better not to look here
 namespace InfFloorRemaster
 {
-    public static class AdditionsFromOtherMods
+    internal static class AdditionsFromOtherMods
     {
-        public static List<WeightedNPCWithFloorPoint> NPCs = new List<WeightedNPCWithFloorPoint>();
-        public static List<WeightedStructureWithParametersWithFloorPoint> weightedStructureWithParameters = new List<WeightedStructureWithParametersWithFloorPoint>();
+        public static List<WeightedNPCWithMinFloor> NPCs = new List<WeightedNPCWithMinFloor>();
+        public static List<WeightedStructureWithParametersWithMinFloor> weightedStructureWithParameters = new List<WeightedStructureWithParametersWithMinFloor>();
     }
 
-    public class WeightedNPCWithFloorPoint
+    internal class LevelGameObjectWithMinFloor<T> where T : class
     {
-        public WeightedNPC npc;
-        public int floorPoint;
+        public T selection = default(T);
+        public int minFloor = 0;
 
-        public WeightedNPCWithFloorPoint(WeightedNPC npc, int floorPoint)
+        internal LevelGameObjectWithMinFloor(T selection,int minFloor)
         {
-            this.npc = npc;
-            this.floorPoint = floorPoint;
+            this.selection = selection;
+            this.minFloor = minFloor;
         }
     }
 
-    public class WeightedStructureWithParametersWithFloorPoint
+    internal class WeightedNPCWithMinFloor : LevelGameObjectWithMinFloor<WeightedNPC>
     {
-        public WeightedStructureWithParameters weightedStructureWithParameters;
-        public int floorPoint;
-
-        public WeightedStructureWithParametersWithFloorPoint(WeightedStructureWithParameters weightedStructureWithParameters, int floorPoint)
+        internal  WeightedNPCWithMinFloor(WeightedNPC weightedNPC, int minFloor) : base(weightedNPC, minFloor)
         {
-            this.weightedStructureWithParameters = weightedStructureWithParameters;
-            this.floorPoint = floorPoint;
+
+        }
+    }
+
+    internal class WeightedStructureWithParametersWithMinFloor : LevelGameObjectWithMinFloor<WeightedStructureWithParameters>
+    {
+        internal WeightedStructureWithParametersWithMinFloor(WeightedStructureWithParameters weightedStructure, int minFloor) : base(weightedStructure, minFloor)
+        {
+
         }
     }
 }
