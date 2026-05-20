@@ -36,6 +36,7 @@ namespace InfFloorRemaster
         public static SceneObject refScene;
         public static SceneObject refF3Scene;
         public static SceneObject pitScene;
+        public int selectedFloor = 1;
         public AssetManager assetManager = new AssetManager();
         public Dictionary<string ,Sprite> UpgradeIcons = new Dictionary<string, Sprite>();
         public static Dictionary<string, StandardUpgrade> Upgrades = new Dictionary<string, StandardUpgrade>();
@@ -48,6 +49,7 @@ namespace InfFloorRemaster
         public static List<WeightedTexture2D> profFloorTextures = new List<WeightedTexture2D>();
 
         private float baseGameMultiplier = 1.5f;
+        private bool shopModified = false;
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
@@ -59,6 +61,8 @@ namespace InfFloorRemaster
                 EndlessTitleUI endlessTitleUI = pickModeMenu.AddComponent<EndlessTitleUI>();
                 endlessTitleUI.hideSeekMenu = hideSeekMenuObject.transform;
                 endlessTitleUI.gl = rootObjects.Where(x => x.name == "GameLoader").First().GetComponent<GameLoader>();
+
+                Log(0, Extensions.GetSceneObject("F5").nextLevel.name);
             }
         }
 
@@ -246,18 +250,25 @@ namespace InfFloorRemaster
             sceneObject.levelNo = save.currentFloor;
             sceneObject.nextLevel = currentSceneObject;
             sceneObject.levelTitle = "F" + save.currentFloor;
-            List<WeightedItemObject> tempItems = new List<WeightedItemObject>();
-            tempItems.AddRange(sceneObject.shopItems);
-            tempItems.Add(new WeightedItemObject()
-            {
-                selection = assetManager.Get<ItemObject>("Bonk"),
-                weight = 100
-            });
             Singleton<CoreGameManager>.Instance.levelMapHasBeenPurchasedFor = null;
-            Singleton<CoreGameManager>.Instance.tripAvailable = true;
             System.Random random = new System.Random(save.currentFloor + Singleton<CoreGameManager>.Instance.Seed());
             random.Next();
             sceneObject.manager.ReflectionSetVariable("happyBaldiPre", assetManager[typeof(HappyBaldi), "HappyBaldi" + random.Next(1, 3)]);
+            if (Singleton<CoreGameManager>.Instance.currentMode == NNFloorMode)
+            {
+                sceneObject.levelObject.finalLevel = true;
+            }
+            if (!shopModified)
+            {
+                List<WeightedItemObject> shopItems = new List<WeightedItemObject>(currentSceneObject.shopItems);
+                shopItems.Add(new WeightedItemObject()
+                {
+                    selection = InfFloorMod.Instance.assetManager.Get<ItemObject>("Bonk"),
+                    weight = 25
+                });
+                currentSceneObject.shopItems = shopItems.ToArray();
+                shopModified = true;
+            }
         }
 
         internal static void ExtendGenData(GeneratorData genData)
@@ -321,6 +332,11 @@ namespace InfFloorRemaster
             genData.items.Add(new WeightedItemObject()
             {
                 selection = InfFloorMod.Instance.assetManager.Get<ItemObject>("Bonk"),
+                weight = 305
+            });
+            genData.items.Add(new WeightedItemObject()
+            {
+                selection = MetaStorage.GetItem(Items.Apple),
                 weight = 305
             });
             List<WeightedRoomAsset> weightedRoomAssets = new List<WeightedRoomAsset>();
@@ -528,6 +544,6 @@ namespace InfFloorRemaster
     {
         public const string Name = "Inf floors remaster";
         public const string GUID = "maximski24.baldiplus.ifr";
-        public const string Ver = "0.3.2";
+        public const string Ver = "0.3.3";
     }
 }

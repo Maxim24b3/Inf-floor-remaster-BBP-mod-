@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.PerformanceData;
 using System.IO;
 
 namespace InfFloorRemaster.Classes
@@ -168,7 +167,6 @@ namespace InfFloorRemaster.Classes
                 writer.Write(item.Key);
                 writer.Write(item.Value);
             }
-            //writer.Write(claimedTicketCurrentFloor);
         }
 
         public static EndlessSave Load(BinaryReader reader)
@@ -189,7 +187,6 @@ namespace InfFloorRemaster.Classes
                 data.Counters.Add(reader.ReadString(), reader.ReadByte());
             }
             if (version == 0) return data;
-            //data.claimedTicketCurrentFloor = reader.ReadBoolean();
             return data;
         }
     }

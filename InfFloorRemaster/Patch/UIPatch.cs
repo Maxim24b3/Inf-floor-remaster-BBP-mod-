@@ -1,10 +1,11 @@
 ﻿using HarmonyLib;
 using MTM101BaldAPI.SaveSystem;
 using System.Linq;
+using System.Reflection;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 namespace InfFloorRemaster.Patch
 {
@@ -29,14 +30,18 @@ namespace InfFloorRemaster.Patch
             Destroy(gameObject.transform.Find("Challenge").gameObject);
             Destroy(gameObject.transform.Find("FieldTrips").gameObject);
             Destroy(gameObject.transform.Find("Tutorial").gameObject);
+
             Transform theMain = gameObject.transform.Find("Main");
             theMain.gameObject.SetActive(true);
+
             Transform theNNChallenge = Instantiate(theMain, theMain.parent);
             theNNChallenge.transform.SetSiblingIndex(1);
             theNNChallenge.name = "99Challenge";
             Transform modeText = gameObject.transform.Find("ModeText");
+
             theMain.localPosition -= new Vector3(0f, 48f, 0f);
             theNNChallenge.localPosition -= new Vector3(0f, 96f, 0f);
+
             TMP_Text mainText = theMain.GetComponent<TMP_Text>();
             TMP_Text nnText = theNNChallenge.GetComponent<TMP_Text>();
             mainText.GetComponent<TextLocalizer>().GetLocalizedText("Btn_InfFloors");
@@ -48,7 +53,7 @@ namespace InfFloorRemaster.Patch
             StandardMenuButton mainB = theMain.GetComponent<StandardMenuButton>();
             StandardMenuButton nnB = theNNChallenge.GetComponent<StandardMenuButton>();
             mainB.OnHighlight.RemoveAllListeners();
-            nnB.OffHighlight.RemoveAllListeners();
+            nnB.OnHighlight.RemoveAllListeners();
 
             mainB.OnHighlight.AddListener(() => modeText.gameObject.GetComponent<TextLocalizer>().GetLocalizedText("Btn_InfFloors_Desc"));
             mainB.OnHighlight.AddListener(() => mode = "main");
@@ -57,31 +62,70 @@ namespace InfFloorRemaster.Patch
 
             hideSeekMenuModed = hideSeekMenu.gameObject.AddComponent<HideSeekMenuModed>();
             hideSeekMenuModed.titleUI = this;
+
             StandardMenuButton startGameButton = hideSeekMenu.Find("MainNew").GetComponent<StandardMenuButton>();
             startGameButton.OnPress.RemoveAllListeners();
-            startGameButton.OnPress.AddListener(() => {
-                if (mode == "main")
-                {
-                    InfFloorMod.save = new Classes.EndlessSave();
-                    gl.LoadLevel(InfFloorMod.currentSceneObject);
-                    InfFloorMod.Instance.UpdateData(ref InfFloorMod.currentSceneObject);
-                    Singleton<CoreGameManager>.Instance.currentMode = Mode.Main;
-                }
-                else if (mode == "nine nine")
-                {
-                    InfFloorMod.save = new Classes.EndlessSave();
-                    InfFloorMod.save.currentFloor = 99;
-                    Singleton<CoreGameManager>.Instance.AddPoints(99999, 0, false);
-                    InfFloorMod.currentSceneObject.mapPrice = InfFloorMod.save.myFloorData.mapPrice;
-                    InfFloorMod.Instance.UpdateData(ref InfFloorMod.currentSceneObject);
-                    gl.LoadLevel(InfFloorMod.pitScene);
-                    Singleton<CoreGameManager>.Instance.nextLevel = InfFloorMod.currentSceneObject;
-                    Singleton<CoreGameManager>.Instance.lifeMode = LifeMode.Intense;
-                    Singleton<CoreGameManager>.Instance.SetLives(0, true);
-                    Singleton<CoreGameManager>.Instance.currentMode = InfFloorMod.NNFloorMode;
-                    Singleton<CoreGameManager>.Instance.currentMode = Mode.Main;
-                }
-            });
+            startGameButton.OnPress.AddListener(() => StartGame());
+        }
+
+        private void StartGame()
+        {
+            gl.gameObject.SetActive(true);
+            gl.CheckSeed();
+
+            if (mode == "main")
+            {
+                InfFloorMod.save = new Classes.EndlessSave();
+                InfFloorMod.save.currentFloor = 1;
+                InfFloorMod.currentSceneObject = InfFloorMod.refF3Scene;
+                InfFloorMod.Instance.UpdateData(ref InfFloorMod.currentSceneObject);
+
+                gl.Initialize(2);
+                gl.SetMode((int)Mode.Main);
+
+                ElevatorScreen evl = GameObject.FindObjectOfType<ElevatorScreen>();
+                gl.AssignElevatorScreen(evl);
+                evl.gameObject.SetActive(true);
+                gl.LoadLevel(InfFloorMod.currentSceneObject);
+                evl.Initialize();
+                gl.SetSave(true);
+            }
+            else if (mode == "nine nine")
+            {
+                gl.Initialize(0);
+                gl.SetMode((int)Mode.Main);
+                InfFloorMod.save = new Classes.EndlessSave();
+                InfFloorMod.save.currentFloor = 99;
+                Singleton<CoreGameManager>.Instance.AddPoints(99999, 0, false);
+                InfFloorMod.currentSceneObject.mapPrice = InfFloorMod.save.myFloorData.mapPrice;
+                InfFloorMod.Instance.UpdateData(ref InfFloorMod.currentSceneObject);
+                ElevatorScreen evl = GameObject.FindObjectOfType<ElevatorScreen>();
+                gl.AssignElevatorScreen(evl);
+                evl.gameObject.SetActive(true);
+                gl.LoadLevel(InfFloorMod.pitScene);
+                evl.Initialize();
+                Singleton<CoreGameManager>.Instance.nextLevel = InfFloorMod.currentSceneObject;
+                Singleton<CoreGameManager>.Instance.lifeMode = LifeMode.Intense;
+                Singleton<CoreGameManager>.Instance.SetLives(0, true);
+                Singleton<CoreGameManager>.Instance.currentMode = InfFloorMod.NNFloorMode;
+                Singleton<CoreGameManager>.Instance.currentMode = Mode.Main;
+
+                gl.SetSave(false);
+            }
+        }
+        
+        public void StartGameSave()
+        {
+            gl.gameObject.SetActive(true);
+            gl.CheckSeed();
+            gl.SetMode((int)Mode.Main);
+            Singleton<CursorManager>.Instance.LockCursor();
+            ElevatorScreen evl = GameObject.FindObjectOfType<ElevatorScreen>();
+            gl.AssignElevatorScreen(evl);
+            evl.gameObject.SetActive(true);
+            gl.LoadSavedGame();
+            evl.Initialize();
+            Singleton<ModdedFileManager>.Instance.DeleteSavedGame();
         }
 
         void Update()
@@ -97,7 +141,6 @@ namespace InfFloorRemaster.Patch
     public class HideSeekMenuModed : MonoBehaviour
     {
         public EndlessTitleUI titleUI;
-
         void Update()
         {
             if (titleUI.mode == "main")
@@ -105,28 +148,22 @@ namespace InfFloorRemaster.Patch
                 if (Singleton<PlayerFileManager>.Instance.savedGameData.saveAvailable)
                 {
                     StandardMenuButton continueGameButton = transform.Find("MainContinue").GetComponent<StandardMenuButton>();
-
                     continueGameButton.gameObject.SetActive(true);
                 }
-
             }
             else
             {
                 StandardMenuButton continueGameButton = transform.Find("MainContinue").GetComponent<StandardMenuButton>();
-
                 continueGameButton.gameObject.SetActive(false);
             }
         }
 
         void OnEnable()
         {
-            Transform conButt = transform.Find("MainContinue");
-            conButt.position = new Vector3(conButt.position.x, 200f, conButt.position.z);
+            StandardMenuButton continueGameButton = transform.Find("MainContinue").GetComponent<StandardMenuButton>();
+            continueGameButton.transform.position = new Vector3(continueGameButton.transform.position.x, 200f, continueGameButton.transform.position.z);
+            continueGameButton.OnPress.RemoveAllListeners();
+            continueGameButton.OnPress.AddListener(() => titleUI.StartGameSave());
         }
-    }
-
-    public class FloorChanger : MonoBehaviour
-    {
-
     }
 }

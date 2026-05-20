@@ -1,15 +1,73 @@
 ﻿using HarmonyLib;
+using InfFloorRemaster.Classes;
+using InfFloorRemaster.Patch;
 using MTM101BaldAPI;
 using MTM101BaldAPI.Registers;
+using MTM101BaldAPI.SaveSystem;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
-using InfFloorRemaster.Patch;
-using InfFloorRemaster.Classes;
 
 namespace InfFloorRemaster.Patch
 {
+    [HarmonyPatch(typeof(GameLoader))]
+    [HarmonyPatch("LoadSavedGame")]
+    public class LoadSavedGamePatch
+    {
+        static bool Prefix(GameLoader __instance)
+        {
+            UnityEngine.Object.Instantiate(__instance.cgmPre);
+            
+            SavedGameData savedGameData = Singleton<PlayerFileManager>.Instance.savedGameData;
+            Singleton<CoreGameManager>.Instance.SetSeed(savedGameData.seed);
+            Singleton<CoreGameManager>.Instance.SetLives(savedGameData.lives, lifeModeOverride: true);
+            Singleton<CoreGameManager>.Instance.SetAttempts(savedGameData.attempts);
+            Singleton<CoreGameManager>.Instance.AddPoints(savedGameData.ytps, 0, playAnimation: false, includeInLevelTotal: false, false);
+            Singleton<CoreGameManager>.Instance.tripPlayed = savedGameData.fieldTripPlayed;
+            Singleton<CoreGameManager>.Instance.johnnyHelped = savedGameData.johnnyHelped;
+            if (savedGameData.mapAvailable)
+            {
+                Singleton<CoreGameManager>.Instance.LoadSavedMap(savedGameData.foundMapTiles.ConvertTo2d(savedGameData.mapSizeX, savedGameData.mapSizeZ), savedGameData.markerPositions, savedGameData.markerIds);
+            }
+            if (savedGameData.mapPurchased)
+            {
+                Singleton<CoreGameManager>.Instance.levelMapHasBeenPurchasedFor = InfFloorMod.currentSceneObject;
+            }
+            Singleton<CoreGameManager>.Instance.RestoreSavedItems(savedGameData.items);
+            Singleton<CoreGameManager>.Instance.RestoreSavedLockerItems(savedGameData.lockerItems);
+            Singleton<PlayerFileManager>.Instance.Save();
+            Singleton<CursorManager>.Instance.LockCursor();
+            __instance.SetMode(0);
+            Singleton<CoreGameManager>.Instance.lifeMode = savedGameData.lifeMode;
+            Singleton<CoreGameManager>.Instance.timeLimitChallenge = savedGameData.timeLimitChallenge;
+            Singleton<CoreGameManager>.Instance.mapChallenge = savedGameData.mapChallenge;
+            Singleton<CoreGameManager>.Instance.inventoryChallenge = savedGameData.inventoryChallenge;
+            
+            __instance.LoadLevel(InfFloorMod.currentSceneObject);
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(PitstopGameManager))]
+    [HarmonyPatch("PrepareLevelData")]
+    class FieldTripAvailable 
+    {
+        static void Prefix(PitstopGameManager __instance)
+        {
+            var type = typeof(PitstopGameManager);
+
+            var fieldInfo = type.GetField("tierOneTripLevel", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            if (fieldInfo != null)
+            {
+                fieldInfo.SetValue(__instance, InfFloorMod.save.currentFloor + 1);
+            }
+        }
+    }
+
     [HarmonyPatch(typeof(MainGameManager))]
     [HarmonyPatch("LoadNextLevel")]
     class LoadNextPatch
@@ -22,6 +80,17 @@ namespace InfFloorRemaster.Patch
             InfFloorMod.save.currentFloor += 1;
             InfFloorMod.Instance.UpdateData(ref endlessSceneObject);
             GluePatch.EndFloor();
+
+            if ((Singleton<CoreGameManager>.Instance.currentMode == InfFloorMod.NNFloorMode) || (Singleton<CoreGameManager>.Instance.currentMode == Mode.Free))
+            {
+                if (InfFloorMod.currentFloorData.FloorID != InfFloorMod.Instance.selectedFloor)
+                {
+                    UnityEngine.Object.Destroy(Singleton<ElevatorScreen>.Instance.gameObject);
+                    Singleton<CoreGameManager>.Instance.Quit();
+                    return false;
+                }
+            }
+
             return true;
         }
     }
@@ -33,6 +102,7 @@ namespace InfFloorRemaster.Patch
         static void Prefix(ref SceneObject sceneObject)
         {
             if (sceneObject.levelObject == null) return;
+            Debug.Log($"[LoadLevel Patch] Updating data...");
             InfFloorMod.Instance.UpdateData(ref sceneObject);
         }
     }
@@ -166,19 +236,16 @@ namespace InfFloorRemaster.Patch
             officeRoomGroup.wallTexture = InfFloorMod.facultyWallTextures.ToArray();
             officeRoomGroup.ceilingTexture = InfFloorMod.ceilTextures.ToArray();
 
+            List<WeightedItemObject> items = new List<WeightedItemObject>(lvlObj.potentialItems);
+            items.AddRange(genData.items);
+            lvlObj.potentialItems = items.ToArray();
+
             lvlObj.potentialStructures = new WeightedStructureWithParameters[0];
             lvlObj.potentialStructures = genData.potentialStructures;
             lvlObj.forcedStructures = new StructureWithParameters[0];
             lvlObj.forcedStructures = genData.forcedStructures;
             lvlObj.minSpecialBuilders = currentFD.minSpecialBuilders;
             lvlObj.maxSpecialBuilders = currentFD.maxSpecialBuilders;
-
-            foreach(var i in lvlObj.potentialStructures)
-            {
-                InfFloorMod.Log(0, i.selection.prefab.name);
-            }
-
-            InfFloorMod.Log(0, $"min special builders {currentFD.minSpecialBuilders}. max special builders {currentFD.maxSpecialBuilders}");
 
             sceneObject.mapPrice = currentFD.mapPrice;
             lvlObj.maxItemValue = currentFD.maxItemValue;
